@@ -15,9 +15,9 @@ class PomodoroTimer:
     def __init__(self, root):
         self.root = root
         self.root.title("Pomodoro Timer")
-        self.root.geometry("400x550")
+        self.root.minsize(400, 550) # Set a minimum size
         self.root.configure(bg=BG_COLOR)
-        self.root.resizable(False, False)
+        # The window is now resizable by default, fixing the visibility issue.
 
         # --- Initialize Pygame Mixer for Sound ---
         try:
@@ -42,6 +42,7 @@ class PomodoroTimer:
 
         # --- UI Setup ---
         self.create_widgets()
+        self.apply_and_reset() # Set initial timer display
 
     def create_widgets(self):
         style = ttk.Style()
@@ -50,6 +51,10 @@ class PomodoroTimer:
         style.configure("TButton", background=BUTTON_COLOR, foreground=FG_COLOR, font=(FONT_NAME, 10))
         style.configure("TEntry", fieldbackground="#3d3d3d", foreground=FG_COLOR, insertbackground=FG_COLOR, font=(FONT_NAME, 10))
         style.configure("TSpinbox", fieldbackground="#3d3d3d", foreground=FG_COLOR, insertbackground=FG_COLOR, font=(FONT_NAME, 10))
+        style.configure("TFrame", background=BG_COLOR)
+        style.configure("TLabelFrame", background=BG_COLOR, foreground=FG_COLOR, bordercolor="#4a4a4a")
+        style.configure("TLabelFrame.Label", background=BG_COLOR, foreground=FG_COLOR)
+
 
         main_frame = ttk.Frame(self.root, padding=20)
         main_frame.pack(fill=tk.BOTH, expand=True)
@@ -74,8 +79,8 @@ class PomodoroTimer:
         self.pause_button = ttk.Button(controls_frame, text="Pause", command=self.pause_timer)
         self.pause_button.grid(row=0, column=1, padx=5)
         
-        self.reset_button = ttk.Button(controls_frame, text="Reset", command=self.reset_timer)
-        self.reset_button.grid(row=0, column=2, padx=5)
+        self.apply_button = ttk.Button(controls_frame, text="Apply", command=self.apply_and_reset)
+        self.apply_button.grid(row=0, column=2, padx=5)
 
         # --- Settings ---
         settings_frame = ttk.LabelFrame(main_frame, text="Settings", padding=10)
@@ -111,13 +116,15 @@ class PomodoroTimer:
         if self.is_running:
             return
 
+        # Apply settings before starting
+        self.apply_and_reset()
         self.is_running = True
         self.start_button.config(state=tk.DISABLED)
         self.tasks = [task.strip() for task in self.task_names_str.get().split(',') if task.strip()]
         
         if not self.tasks:
             messagebox.showerror("Error", "Please enter at least one task name.")
-            self.reset_timer()
+            self.apply_and_reset()
             return
             
         self.current_cycle = 0
@@ -127,13 +134,13 @@ class PomodoroTimer:
         if self.current_cycle >= self.total_cycles.get():
             self.session_label.config(text="All cycles complete!")
             self.task_label.config(text="Great work!")
-            self.reset_timer(finished=True)
+            self.apply_and_reset(finished=True)
             return
 
         if self.current_session_type == "Work" or self.current_session_type == "":
             self.current_cycle += 1
             # It's time for a break
-            if self.current_cycle % 4 == 0:
+            if self.current_cycle % 4 == 0 and self.current_cycle > 0:
                 self.current_session_type = "Long Break"
                 self.remaining_seconds = self.long_break_mins.get() * 60
                 self.session_label.config(text=f"Long Break ({self.current_cycle} / {self.total_cycles.get()})")
@@ -176,7 +183,7 @@ class PomodoroTimer:
             if self.timer_id:
                 self.root.after_cancel(self.timer_id)
 
-    def reset_timer(self, finished=False):
+    def apply_and_reset(self, finished=False):
         if self.timer_id:
             self.root.after_cancel(self.timer_id)
         
@@ -208,3 +215,4 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = PomodoroTimer(root)
     root.mainloop()
+
